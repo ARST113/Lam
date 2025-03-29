@@ -3,7 +3,7 @@ Lampa.Platform.tv();
 (function () {
     'use strict';
 
-    console.log('[SorterPlugin] Кастомный порядок кнопок');
+    console.log('[SorterPlugin] загружен');
 
     function startPlugin() {
         try {
@@ -15,58 +15,44 @@ Lampa.Platform.tv();
                 if (e.type === 'complite') {
                     setTimeout(function () {
                         try {
-                            var fullContainer = e.object.activity.render();
-                            var targetContainer = fullContainer.find('.full-start-new__buttons');
-                            console.log('[SorterPlugin] Обнаружен контейнер:', targetContainer);
-
-                            // Собираем все кнопки (кроме .button--play, чтобы не ломать Cinema)
-                            var all = fullContainer.find('.buttons--container .full-start__button')
+                            const fullContainer = e.object.activity.render();
+                            const targetContainer = fullContainer.find('.full-start-new__buttons');
+                            const allButtons = fullContainer.find('.buttons--container .full-start__button')
                                 .add(targetContainer.find('.full-start__button'));
 
-                            // Фильтруем по классам
-                            var cinema       = all.filter('.cinema');
-                            var online       = all.filter('.online');
-                            var torrent      = all.filter('.torrent');
-                            var trailer      = all.filter('.trailer');
-                            var favorite     = all.filter('.button--favorite');
-                            var like         = all.filter('.button--like, .button--vote, .button--reaction');
-                            var submenu      = all.filter('.button--submenu, .button--menu');
+                            const cinema = allButtons.filter('.cinema');
+                            const torrent = allButtons.filter('.torrent');
+                            const online = allButtons.filter(function () {
+                                return $(this).attr('class').includes('online');
+                            });
+                            const trailers = allButtons.filter(function () {
+                                return $(this).attr('class').includes('trailer');
+                            });
+                            const other = allButtons.not('.cinema, .torrent')
+                                .filter(function () {
+                                    const cls = $(this).attr('class');
+                                    return !cls.includes('online') && !cls.includes('trailer');
+                                });
 
-                            // Исключаем всё вышеперечисленное, чтобы найти "остальные"
-                            var rest = all.not('.cinema, .online, .torrent, .trailer, .button--favorite, .button--like, .button--vote, .button--reaction, .button--submenu, .button--menu, .button--play');
+                            const orderedButtons = []
+                                .concat(cinema.get())
+                                .concat(torrent.get())
+                                .concat(online.get())
+                                .concat(trailers.get())
+                                .concat(other.get());
 
-                            // Собираем в порядке
-                            var newOrder = [];
-                            // 1) Cinema (не перемещаем, если хотим, чтобы она осталась «на месте» — можно убрать из сортировки)
-                            cinema.each(function(){ newOrder.push($(this)); });
-                            // 2) Online
-                            online.each(function(){ newOrder.push($(this)); });
-                            // 3) Torrent
-                            torrent.each(function(){ newOrder.push($(this)); });
-                            // 4) Trailer
-                            trailer.each(function(){ newOrder.push($(this)); });
-                            // 5) Favorite
-                            favorite.each(function(){ newOrder.push($(this)); });
-                            // 6) Like / Vote
-                            like.each(function(){ newOrder.push($(this)); });
-                            // 7) Submenu (три точки)
-                            submenu.each(function(){ newOrder.push($(this)); });
-                            // 8) Остальные
-                            rest.each(function(){ newOrder.push($(this)); });
+                            // Удаляем старые, кроме button--play (если нужен)
+                            targetContainer.find('.full-start__button').not('.button--play').remove();
 
-                            // Теперь "удаляем" (detach) все, кроме button--play (чтобы сохранить кликабельность Cinema)
-                            targetContainer.find('.full-start__button').not('.button--play').detach();
-
-                            // Вставляем по порядку
-                            newOrder.forEach(function ($b) {
-                                targetContainer.append($b);
+                            // Добавляем в порядке
+                            orderedButtons.forEach(btn => {
+                                targetContainer.append(btn);
                             });
 
-                            // Возвращаем управление
                             Lampa.Controller.toggle("full_start");
-                            console.log('[SorterPlugin] Порядок кнопок изменён (кастом)');
+                            console.log('[SorterPlugin] порядок обновлён');
                         } catch (err) {
-                            console.error('[SorterPlugin] Ошибка в кастомном порядке:', err);
+                            console.error('[SorterPlugin] ошибка сортировки:', err);
                         }
                     }, 100);
                 }
@@ -76,7 +62,7 @@ Lampa.Platform.tv();
                 module.exports = {};
             }
         } catch (err) {
-            console.error('[SorterPlugin] Ошибка инициализации плагина (кастом):', err);
+            console.error('[SorterPlugin] ошибка запуска:', err);
         }
     }
 
